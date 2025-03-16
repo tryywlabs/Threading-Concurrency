@@ -1,25 +1,24 @@
 public class SlowCalculator implements Runnable {
 
   private final long N;
-  private String res;
+  private int res;
 
   public SlowCalculator(final long N) {
       this.N = N;
-      this.res = "";
+      this.res = -1;
   }
 
   public long getLong(){
     return this.N;
   }
 
-  public String getRes(){
+  public int getResult(){
     return this.res;
   }
 
   public void run() {
       final int result = calculateNumFactors(N);
-      String res = Integer.toString(result);
-      this.res = res;
+      this.res = result;
   }
 
   private static int calculateNumFactors(final long N) {
@@ -28,6 +27,9 @@ public class SlowCalculator implements Runnable {
       // You should NOT modify the calculation performed by this class, but you may want to add support for interruption
       int count = 0;
       for (long candidate = 2; candidate < Math.abs(N); ++candidate) {
+        if(Thread.currentThread().isInterrupted()){
+            return -2;
+        }
           if (isPrime(candidate)) {
               if (Math.abs(N) % candidate == 0) {
                   count++;
