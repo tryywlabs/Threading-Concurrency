@@ -1,7 +1,7 @@
 public class AP_tester {
 	public static void main(String[] args) {
 		Solution solution = new Solution();
-		//instructionTester(solution);
+		// instructionTester(solution);
 		// System.out.println(abortSpeedTester(solution));
 		// successiveAfterTester(solution);
 		// AfterNoRunnableThread(solution);
@@ -15,12 +15,12 @@ public class AP_tester {
 		// multipleGetStatusTester(solution);
 		// finishCalculationTester(solution);
 		// nothingToFinishTester(solution);
-		 wrongCommandsTester(solution);
+		// wrongCommandsTester(solution);
 
 		//---------//
 		// testCancel(solution);
 		// afterTesterRedo(solution);
-		// finishTesterPlease(solution);
+		finishTesterPlease(solution);
 	}
 	
 	public static void instructionTester(Solution solution) {
@@ -29,12 +29,13 @@ public class AP_tester {
 		sleep();
 		System.out.println(solution.runCommand("get 10456060"));
 		System.out.println(solution.runCommand("start 72345680"));
-		System.out.println(solution.runCommand("start 534912560"));
-		System.out.println(solution.runCommand("get 534912560"));
+		System.out.println(solution.runCommand("start 5432"));
+		System.out.println(solution.runCommand("get 5432"));
 		System.out.println(solution.runCommand("running"));
 		System.out.println(solution.runCommand("cancel 72345680"));
 		System.out.println(solution.runCommand("running"));
 		System.out.println(solution.runCommand("finish"));
+		System.out.println(solution.runCommand("get 5432"));
 	}
 	
 	public static void cancelNonExistant(Solution solution) {
@@ -101,6 +102,7 @@ public class AP_tester {
 		System.out.println("only 1 thread should be running");
 		System.out.println(solution.runCommand("running"));
 		System.out.println(solution.runCommand("abort"));
+		System.out.println(solution.runCommand("get 2"));
 	}
 	
 
@@ -160,7 +162,7 @@ public class AP_tester {
 		System.out.println(solution.runCommand("after 33333333333 44444444444"));
 		System.out.println(solution.runCommand("cancel 2"));
 		System.out.println("3* and 4* should start immediately");
-		System.out.println("there should be 3 running, 1*, 3*");
+		System.out.println("there should be 2 running, 1*, 3*");
 		System.out.println(solution.runCommand("running"));
 		System.out.println("4* should be waiting 3* to finish");
 		System.out.println(solution.runCommand("get 44444444444"));

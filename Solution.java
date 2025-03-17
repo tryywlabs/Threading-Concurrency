@@ -143,6 +143,8 @@ public class Solution implements CommandRunner {
   public String cancel(Long N){
     Thread thread;
 
+    boolean waitingRemoved = false;
+
     synchronized (this) {
 
         // filter out finished calculations
@@ -153,13 +155,17 @@ public class Solution implements CommandRunner {
         // filter out non-running calculations
         if (!runningThreads.containsKey(N)) {
           //cancel all waiting procedures
-            for (List<Long> dependents : dependencies.values()) {
-                if (dependents.contains(N)) {
-                    dependents.remove(N);
-                    waiting.remove(N);
-                }
-            }
-
+          if(waiting.contains(N)){
+            waiting.remove(N);
+            waitingRemoved = true;
+          }
+            //cancel all waiting procedures
+              for (List<Long> dependents : dependencies.values()) {
+                  if (dependents.contains(N)) {
+                      dependents.remove(N);
+                      waiting.remove(N);
+                  }
+              }
             //Check and start all threads scheduled after N
             if (dependencies.containsKey(N)) {
                 List<Long> dependents = dependencies.remove(N);
@@ -169,7 +175,10 @@ public class Solution implements CommandRunner {
                 }
                 return "cancelled " + N;
             }
-            return "cancelled " + N;
+            if(waitingRemoved){
+              return "cancelled " + N;
+            }
+            return "";
         }
         cancelledThreads.add(N);
     }
@@ -288,6 +297,11 @@ public class Solution implements CommandRunner {
           if (thread.isAlive()) {
               thread.interrupt();
           }
+      }
+
+      for(Long N : waiting){
+        cancelledThreads.add(N);
+        waiting.remove(N);
       }
   }
 
