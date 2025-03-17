@@ -1,14 +1,14 @@
 public class AP_tester {
 	public static void main(String[] args) {
 		Solution solution = new Solution();
-//		instructionTester(solution);
+		// instructionTester(solution);
 		// System.out.println(abortSpeedTester(solution));
 		// successiveAfterTester(solution);
 //		AfterNoRunnableThread(solution);
 		// noCalculationTester(solution);
 //		circularDependencyTester(solution);
 		// cancelNonExistant(solution);
-//		System.out.println(cancelSpeedTester(solution));
+		// System.out.println(cancelSpeedTester(solution));
 //		competingAfterTester(solution);
 		// CancelThreadWhileWaitingTester(solution); //************NOT CANCELLING AFTER THREADS
 //		CancelMiddleOfMultipleWaitingThreadsTester(solution);
@@ -16,6 +16,9 @@ public class AP_tester {
 		// finishCalculationTester(solution); //************SHOULD I BE ABLE TO GET THE RESULT STILL?
 		// nothingToFinishTester(solution);
 		// wrongCommandsTester(solution);
+
+		//---------//
+		testCancel(solution);
 	}
 	
 	public static void instructionTester(Solution solution) {
@@ -101,9 +104,11 @@ public class AP_tester {
 
 	public static void AfterNoRunnableThread(Solution solution) {
 		System.out.println(solution.runCommand("start 1111111111"));
+		System.out.println(solution.runCommand("after 1111111111 2"));
+		System.out.println(solution.runCommand("running"));
 		System.out.println(solution.runCommand("cancel 1111111111"));
 		System.out.println("⇩immediately start calculation for 2");
-		System.out.println(solution.runCommand("after 1111111111 2"));
+		System.out.println(solution.runCommand("running"));
 		System.out.println(solution.runCommand("get 2"));	//not working
 		System.out.println(solution.runCommand("abort"));
 	}
@@ -222,5 +227,20 @@ public class AP_tester {
 		} catch (InterruptedException e) {
 		    Thread.currentThread().interrupt(); // Restore interrupted status
 		}
+	}
+
+	public static void testCancel(Solution solution){
+		System.out.println(solution.runCommand("start 1111111111"));
+		System.out.println(solution.runCommand("running"));
+		System.out.println(solution.runCommand("start 22222222"));
+		System.out.println(solution.runCommand("running"));
+		System.out.println(solution.runCommand("start 33333333"));
+		System.out.println(solution.runCommand("running"));
+		System.out.println(solution.runCommand("cancel 1111111111"));
+		System.out.println(solution.runCommand("running"));
+		System.out.println(solution.runCommand("cancel 22222222"));
+		System.out.println(solution.runCommand("running"));
+		System.out.println(solution.runCommand("cancel 33333333"));
+		System.out.println(solution.runCommand("running"));
 	}
 }

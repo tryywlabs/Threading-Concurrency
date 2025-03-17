@@ -1,5 +1,6 @@
 import java.lang.Thread;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -13,8 +14,8 @@ public class Solution implements CommandRunner {
    */
   private ConcurrentHashMap<Long, Thread> runningThreads;   //Map of currently running threads
   private ConcurrentHashMap<Long, Integer> finishedThreads; //Map of calculation finished threads, Long and Result
-  private ConcurrentHashMap<Long, Thread> cancelledThreads; //Map of cancelled threads
-  private ConcurrentHashMap<Long, List<Long>> dependencies; //Map of a thread and its dependencies as a list
+  private List<Long> cancelledThreads; //Map of cancelled threads
+  private HashMap<Long, List<Long>> dependencies; //Map of a thread and its dependencies as a list
   private ConcurrentLinkedQueue<Long> waiting;
   private List<Long> circularPath = new ArrayList<>();      //List to track circular path, reset everytime used
 
@@ -26,8 +27,8 @@ public class Solution implements CommandRunner {
   public Solution(){
     runningThreads = new ConcurrentHashMap<>();
     finishedThreads = new ConcurrentHashMap<>();
-    cancelledThreads = new ConcurrentHashMap<>();
-    dependencies = new ConcurrentHashMap<>();
+    cancelledThreads = new ArrayList<>();
+    dependencies = new HashMap<>();
     waiting = new ConcurrentLinkedQueue<>();
   }
 
@@ -115,15 +116,21 @@ public class Solution implements CommandRunner {
     SlowCalculator calc = new SlowCalculator(N);
     Thread thread = new Thread(){
       public void run(){
-        calc.run();
-        finishedThreads.put(N, calc.getResult());
-        runningThreads.remove(N);
-        
-        if(dependencies.contains(N)){
-          //remove key N from dependencies when N finishes, start all dependent threads
-          List<Long> dependents = dependencies.remove(N);
-          for(Long dependent : dependents){
-            start(dependent);
+        try {
+          calc.run();
+          finishedThreads.put(N, calc.getResult());
+        } catch (ConcurrentModificationException e) {
+          e.printStackTrace();
+        }
+        finally{
+          runningThreads.remove(N);
+          if(dependencies.containsKey(N)){
+            //remove key N from dependencies when N finishes, start all dependent threads
+            List<Long> dependents = dependencies.remove(N);
+            for(Long dependent : dependents){
+              waiting.remove(dependent);
+              start(dependent);
+            }
           }
         }
       }
@@ -134,30 +141,103 @@ public class Solution implements CommandRunner {
   }
 
   //COMMAND: CANCEL
-  public synchronized String cancel(Long N){
-    if(cancelledThreads.containsKey(N)){
-      return "cancelled";
+  public String cancel(Long N){
+    // //when already finished calculation, return empty string
+    // if(cancelledThreads.contains(N) || finishedThreads.containsKey(N)){
+    //   return "";
+    // }
+    // else if(!runningThreads.containsKey(N)){
+    //   return "";
+    // }
+    // Thread thread = runningThreads.get(N);
+    // //If thread is waiting and not started yet, simply remove from data structures
+
+    // synchronized (this){
+    //   try {
+    //     if (thread != null) {
+    //       if(thread.isAlive()){
+    //         runningThreads.remove(N);
+    //         cancelledThreads.add(N);
+    //         return "cancelled " + N;
+    //       }
+    //     }
+    //   } catch (ConcurrentModificationException e) {
+    //     e.printStackTrace();
+    //   }
+    // }
+
+    // if(waiting.contains(N)){
+    //   waiting.remove(N);
+    //   cancelledThreads.add(N);
+    //   synchronized (this){
+    //       if (dependencies.containsKey(N)){
+    //       List<Long> dependents = dependencies.remove(N);
+    //       if(dependents != null){
+    //         for(Long dependent : dependents){
+    //           if(waiting.contains(dependent)){
+    //             waiting.remove(dependent);
+    //           }
+    //           start(dependent);
+    //         }
+    //         for(List<Long> values : dependencies.values()){
+    //           if(values.contains(N)){
+    //             values.remove(N);
+    //           }
+    //         }
+    //       }
+    //     }
+    //   }
+    //   return "cancelled" + N;
+    // }
+    // thread.interrupt();
+    // try {
+    //   thread.join();
+    // } catch (InterruptedException e) {
+    //   e.printStackTrace();
+    // }
+    // return "";
+    Thread thread;
+
+    synchronized (this) {
+
+        // filter out finished calculations
+        if (finishedThreads.contains(N)) {
+            return "";
+        }
+
+        // filter out non-running calculations
+        if (!runningThreads.containsKey(N)) {
+          //cancel all waiting procedures
+            for (List<Long> dependents : dependencies.values()) {
+                if (dependents.contains(N)) {
+                    dependents.remove(N);
+                    waiting.remove(N);
+                }
+            }
+
+            //Check and start all threads scheduled after N
+            if (dependencies.containsKey(N)) {
+                List<Long> dependents = dependencies.remove(N);
+                for(Long dependent : dependents){
+                  start(dependent);
+                  waiting.remove(dependent);
+                }
+                this.cancelledThreads.add(N);
+                return "removed from after";
+            }
+            return "cancelled non-existent calculation";
+        }
     }
 
-    Thread thread = runningThreads.get(N);
+    thread = runningThreads.get(N);
+    thread.interrupt();
+
     try {
-      if (thread != null) {
-        if(thread.isAlive()){
-          thread.interrupt();
-          thread.join();
-          runningThreads.remove(N);
-          cancelledThreads.put(N, thread);
-        }
-        else{
-          return "";
-        }
-      }
-      else{
-        return "";
-      }
+        thread.join();
     } catch (InterruptedException e) {
-      e.printStackTrace();
+        e.getStackTrace();
     }
+
     return "cancelled " + N;
   }
 
@@ -187,8 +267,8 @@ public class Solution implements CommandRunner {
   }
 
   //COMMAND: GET
-  public String get(Long N){
-    if(cancelledThreads.containsKey(N)){
+  public synchronized String get(Long N){
+    if(cancelledThreads.contains(N)){
       return "cancelled";
     }
 
@@ -217,9 +297,8 @@ public class Solution implements CommandRunner {
       return createCircularMessage(N, M);
     }
     
-    //Check if N is already completed, immediately start M
-    if(finishedThreads.containsKey(N)){
-      waiting.remove(M);
+    //Check if N is already completed or cancelled, immediately start M
+    if(finishedThreads.containsKey(N) || cancelledThreads.contains(N)){
       return start(M);
     }
 
@@ -375,7 +454,7 @@ public class Solution implements CommandRunner {
 
     if(N.equals(M) && circularPath.size() > 1) return true;
 
-    if(!dependencies.contains(N)){
+    if(!dependencies.containsKey(N)){
       circularPath.remove(N);
       return false;
     }
