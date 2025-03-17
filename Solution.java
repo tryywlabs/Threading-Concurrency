@@ -34,7 +34,7 @@ public class Solution implements CommandRunner {
   //METHOD: runCommand
   public String runCommand(String command){
     if(command == null || command.trim().isEmpty()){
-      return "Invalid Command";
+      return "Invalid command";
     }
     //Split command input by whitespace, depending on length of split string the evaluation of command will differ.
     command = command.toLowerCase();
@@ -82,7 +82,6 @@ public class Solution implements CommandRunner {
           if(parsedCmd.length != 1){
             return "Invalid command";
           }
-          // System.out.println("calling finished");
           return finish();
         case "abort":
           if(parsedCmd.length != 1){
@@ -99,8 +98,8 @@ public class Solution implements CommandRunner {
     }
   }
 
-  /* METHODS: COMMAND IMPLEMENTATION METHODS */
-  /*
+  /* METHODS: COMMAND IMPLEMENTATIONS
+   *
    * 1. START
    * 2. CANCEL
    * 3. RUNNING
@@ -111,7 +110,7 @@ public class Solution implements CommandRunner {
    * 
    */
 
-  //COMMAND: START
+  //1. COMMAND: START
   public synchronized String start(Long N){
     if (runningThreads.contains(N)){
       return "Already running " + N;
@@ -140,7 +139,7 @@ public class Solution implements CommandRunner {
     return "started " + N;
   }
 
-  //COMMAND: CANCEL
+  //2. COMMAND: CANCEL
   public String cancel(Long N){
     Thread thread;
 
@@ -187,7 +186,7 @@ public class Solution implements CommandRunner {
     return "cancelled " + N;
   }
 
-  //COMMAND: RUNNING
+  //3. COMMAND: RUNNING
   public synchronized String running(){
     List<String> activeThreads = new ArrayList<>();
     for(HashMap.Entry<Long, Thread> entry : runningThreads.entrySet()){
@@ -212,7 +211,7 @@ public class Solution implements CommandRunner {
     }
   }
 
-  //COMMAND: GET
+  //4. COMMAND: GET
   public synchronized String get(Long N){
     if(cancelledThreads.contains(N)){
       return "cancelled";
@@ -233,7 +232,7 @@ public class Solution implements CommandRunner {
     return "No such thread found";
   }
 
-  //COMMAND: AFTER
+  //5. COMMAND: AFTER
   public String after(Long N, Long M){
     //Check for circular dependency (Refer to Helper Methods)
     if(isCircularDependent(N, M)){
@@ -263,7 +262,7 @@ public class Solution implements CommandRunner {
     return M + " will start after " + N;
   }
 
-  //COMMAND: FINISH
+  //6. COMMAND: FINISH
   public synchronized String finish(){
     while(!runningThreads.isEmpty()){
       try {
@@ -275,7 +274,7 @@ public class Solution implements CommandRunner {
     return "finished";
   }
 
-  //COMMAND: ABORT
+  //7. COMMAND: ABORT
   public String abort(){
     synchronized (this) {
       this.dependencies.clear();
@@ -309,8 +308,7 @@ public class Solution implements CommandRunner {
   }
 
 
-  /*
-   * HELPER METHODS
+  /* METHODS: HELPER METHODS
    * 1. startDependentThreads
    * 2. isCircularDependent
    * 3. getCircularPath
