@@ -1,30 +1,32 @@
 public class AP_tester {
 	public static void main(String[] args) {
 		Solution solution = new Solution();
-		// instructionTester(solution);
+		instructionTester(solution); //NOT TERMINATING
 		// System.out.println(abortSpeedTester(solution));
 		// successiveAfterTester(solution);
-//		AfterNoRunnableThread(solution);
+		// AfterNoRunnableThread(solution);
 		// noCalculationTester(solution);
-//		circularDependencyTester(solution);
+		// circularDependencyTester(solution);
 		// cancelNonExistant(solution);
 		// System.out.println(cancelSpeedTester(solution));
-//		competingAfterTester(solution);
-		// CancelThreadWhileWaitingTester(solution); //************NOT CANCELLING AFTER THREADS
-//		CancelMiddleOfMultipleWaitingThreadsTester(solution);
-//		multipleGetStatusTester(solution); ////************GET 3 NOT WORKING 
-		// finishCalculationTester(solution); //************SHOULD I BE ABLE TO GET THE RESULT STILL?
+		// competingAfterTester(solution);
+		// CancelThreadWhileWaitingTester(solution);
+		// CancelMiddleOfMultipleWaitingThreadsTester(solution);
+		// multipleGetStatusTester(solution);
+		// finishCalculationTester(solution);
 		// nothingToFinishTester(solution);
 		// wrongCommandsTester(solution);
 
 		//---------//
-		testCancel(solution);
+		// testCancel(solution);
+		// afterTesterRedo(solution);
+		// finishTesterPlease(solution);
 	}
 	
 	public static void instructionTester(Solution solution) {
 		System.out.println(solution.runCommand("start 10456060"));
 		System.out.println(solution.runCommand("running"));
-		// sleep();
+		sleep();
 		System.out.println(solution.runCommand("get 10456060"));
 		System.out.println(solution.runCommand("start 72345680"));
 		System.out.println(solution.runCommand("start 534912560"));
@@ -32,7 +34,7 @@ public class AP_tester {
 		System.out.println(solution.runCommand("running"));
 		System.out.println(solution.runCommand("cancel 72345680"));
 		System.out.println(solution.runCommand("running"));
-		System.out.println(solution.runCommand("finish"));
+		// System.out.println(solution.runCommand("finish"));
 	}
 	
 	public static void cancelNonExistant(Solution solution) {
@@ -104,12 +106,13 @@ public class AP_tester {
 
 	public static void AfterNoRunnableThread(Solution solution) {
 		System.out.println(solution.runCommand("start 1111111111"));
-		System.out.println(solution.runCommand("after 1111111111 2"));
+		System.out.println(solution.runCommand("after 1111111111 22222"));
 		System.out.println(solution.runCommand("running"));
 		System.out.println(solution.runCommand("cancel 1111111111"));
 		System.out.println("⇩immediately start calculation for 2");
 		System.out.println(solution.runCommand("running"));
-		System.out.println(solution.runCommand("get 2"));	//not working
+		sleep();
+		System.out.println(solution.runCommand("get 22222"));
 		System.out.println(solution.runCommand("abort"));
 	}
 	
@@ -175,7 +178,7 @@ public class AP_tester {
 		System.out.println("⇩waiting");
 		System.out.println(solution.runCommand("get 2"));
 		System.out.println("⇩result is 0");
-		System.out.println(solution.runCommand("get 3"));
+		System.out.println(solution.runCommand("get 3")); //not working
 		System.out.println("⇩cancelled");
 		System.out.println(solution.runCommand("get 4444444444"));
 		System.out.println(solution.runCommand("abort"));
@@ -183,8 +186,10 @@ public class AP_tester {
 	
 	public static void finishCalculationTester(Solution solution) {
 		System.out.println(solution.runCommand("start 11111111"));
+		System.out.println(solution.runCommand("after 11111111 22222"));
 		System.out.println("takes about 15 seconds to finished");
 		System.out.println(solution.runCommand("finish"));
+		System.out.println(solution.runCommand("get 22222"));
 	}
 	
 	public static void nothingToFinishTester(Solution solution) {
@@ -198,8 +203,11 @@ public class AP_tester {
 		System.out.println(solution.runCommand("cancel 33333333"));
 		System.out.println(solution.runCommand("cancel 44444444"));
 		System.out.println(solution.runCommand("cancel 55555555"));
+		long start = System.currentTimeMillis();
 		System.out.println("should immediately says finished");
 		System.out.println(solution.runCommand("finish"));
+		long end = System.currentTimeMillis();
+		System.out.println("Time taken: " + (end - start) + "ms");
 	}
 	
 	public static void wrongCommandsTester(Solution solution) {
@@ -223,7 +231,7 @@ public class AP_tester {
 
 	public static void sleep() {
 		try {
-		    Thread.sleep(20000); // Pauses for 1400 milliseconds (1.4 second)
+		    Thread.sleep(2000); // Pauses for 1400 milliseconds (1.4 second)
 		} catch (InterruptedException e) {
 		    Thread.currentThread().interrupt(); // Restore interrupted status
 		}
@@ -242,5 +250,36 @@ public class AP_tester {
 		System.out.println(solution.runCommand("running"));
 		System.out.println(solution.runCommand("cancel 33333333"));
 		System.out.println(solution.runCommand("running"));
+	}
+
+	public static void afterTesterRedo(Solution solution) {
+		System.out.println(solution.runCommand("start 111111"));
+		System.out.println(solution.runCommand("after 111111 2222222222"));
+		System.out.println(solution.runCommand("after 111111 3333333333"));
+		System.out.println(solution.runCommand("after 111111 4444444444"));
+		System.out.println("currently only 1 thread (111111) should be running");
+		System.out.println(solution.runCommand("running"));
+		try {
+			Thread.sleep(10000); // Pauses for 1400 milliseconds (1.4 second)
+	} catch (InterruptedException e) {
+			Thread.currentThread().interrupt(); // Restore interrupted status
+	}
+
+		System.out.println("currently 3 threads(2*, 3*, 4*) should be running");
+		System.out.println(solution.runCommand("running"));
+		System.out.println(solution.runCommand("abort"));
+	}
+
+	public static void finishTesterPlease(Solution solution) {
+		System.out.println(solution.runCommand("start 1111111"));
+		System.out.println(solution.runCommand("after 1111111 22222"));
+		System.out.println(solution.runCommand("after 1111111 33333"));
+		System.out.println(solution.runCommand("after 1111111 44444"));
+		System.out.println("currently only 1 thread (1111111) should be running");
+		System.out.println(solution.runCommand("running"));
+		System.out.println(solution.runCommand("finish"));
+		System.out.println(solution.runCommand("get 22222"));
+		System.out.println(solution.runCommand("get 33333"));
+		System.out.println(solution.runCommand("get 44444"));
 	}
 }

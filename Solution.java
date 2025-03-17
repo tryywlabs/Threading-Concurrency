@@ -1,9 +1,9 @@
 import java.lang.Thread;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -17,7 +17,6 @@ public class Solution implements CommandRunner {
   private List<Long> cancelledThreads; //Map of cancelled threads
   private HashMap<Long, List<Long>> dependencies; //Map of a thread and its dependencies as a list
   private ConcurrentLinkedQueue<Long> waiting;
-  private List<Long> circularPath = new ArrayList<>();      //List to track circular path, reset everytime used
 
   public boolean getRunning(){
     return runningThreads.isEmpty();
@@ -83,6 +82,7 @@ public class Solution implements CommandRunner {
           if(parsedCmd.length != 1){
             return "Invalid command";
           }
+          // System.out.println("calling finished");
           return finish();
         case "abort":
           if(parsedCmd.length != 1){
@@ -97,7 +97,6 @@ public class Solution implements CommandRunner {
     } catch (Exception e){
       return "Invalid command";
     }
-
   }
 
   /* METHODS: COMMAND IMPLEMENTATION METHODS */
@@ -109,32 +108,33 @@ public class Solution implements CommandRunner {
    * 5. AFTER
    * 6. FINISH
    * 7. ABORT
+   * 
    */
 
   //COMMAND: START
   public synchronized String start(Long N){
+    if (runningThreads.contains(N)){
+      return "Already running " + N;
+    }
+    if (finishedThreads.contains(N)){
+      return "Finished running " + N;
+    }
     SlowCalculator calc = new SlowCalculator(N);
-    Thread thread = new Thread(){
-      public void run(){
-        try {
-          calc.run();
+    Thread thread = new Thread(() -> {
+        calc.run();
+        if(calc.getResult() == -2){
+          cancelledThreads.add(N);
+        }
+        else{
           finishedThreads.put(N, calc.getResult());
-        } catch (ConcurrentModificationException e) {
-          e.printStackTrace();
         }
-        finally{
-          runningThreads.remove(N);
-          if(dependencies.containsKey(N)){
-            //remove key N from dependencies when N finishes, start all dependent threads
-            List<Long> dependents = dependencies.remove(N);
-            for(Long dependent : dependents){
-              waiting.remove(dependent);
-              start(dependent);
-            }
-          }
+        if(waiting.contains(N)){
+          waiting.remove(N);
         }
-      }
-    };
+        runningThreads.remove(N);
+        startDependentThreads(N);
+    }, String.valueOf(N));
+
     runningThreads.put(N, thread);
     thread.start();
     return "started " + N;
@@ -142,66 +142,12 @@ public class Solution implements CommandRunner {
 
   //COMMAND: CANCEL
   public String cancel(Long N){
-    // //when already finished calculation, return empty string
-    // if(cancelledThreads.contains(N) || finishedThreads.containsKey(N)){
-    //   return "";
-    // }
-    // else if(!runningThreads.containsKey(N)){
-    //   return "";
-    // }
-    // Thread thread = runningThreads.get(N);
-    // //If thread is waiting and not started yet, simply remove from data structures
-
-    // synchronized (this){
-    //   try {
-    //     if (thread != null) {
-    //       if(thread.isAlive()){
-    //         runningThreads.remove(N);
-    //         cancelledThreads.add(N);
-    //         return "cancelled " + N;
-    //       }
-    //     }
-    //   } catch (ConcurrentModificationException e) {
-    //     e.printStackTrace();
-    //   }
-    // }
-
-    // if(waiting.contains(N)){
-    //   waiting.remove(N);
-    //   cancelledThreads.add(N);
-    //   synchronized (this){
-    //       if (dependencies.containsKey(N)){
-    //       List<Long> dependents = dependencies.remove(N);
-    //       if(dependents != null){
-    //         for(Long dependent : dependents){
-    //           if(waiting.contains(dependent)){
-    //             waiting.remove(dependent);
-    //           }
-    //           start(dependent);
-    //         }
-    //         for(List<Long> values : dependencies.values()){
-    //           if(values.contains(N)){
-    //             values.remove(N);
-    //           }
-    //         }
-    //       }
-    //     }
-    //   }
-    //   return "cancelled" + N;
-    // }
-    // thread.interrupt();
-    // try {
-    //   thread.join();
-    // } catch (InterruptedException e) {
-    //   e.printStackTrace();
-    // }
-    // return "";
     Thread thread;
 
     synchronized (this) {
 
         // filter out finished calculations
-        if (finishedThreads.contains(N)) {
+        if (finishedThreads.contains(N) || cancelledThreads.contains(N)) {
             return "";
         }
 
@@ -222,11 +168,11 @@ public class Solution implements CommandRunner {
                   start(dependent);
                   waiting.remove(dependent);
                 }
-                this.cancelledThreads.add(N);
-                return "removed from after";
+                return "cancelled " + N;
             }
-            return "cancelled non-existent calculation";
+            return "cancelled " + N;
         }
+        cancelledThreads.add(N);
     }
 
     thread = runningThreads.get(N);
@@ -272,20 +218,17 @@ public class Solution implements CommandRunner {
       return "cancelled";
     }
 
-    if(waiting.contains(N)){
+    else if(waiting.contains(N)){
       return "waiting";
     }
 
-    Thread thread = runningThreads.get(N);
-    if(thread != null){
-      if(thread.isAlive()){
-        return "calculating";
-      }
-      else{
-        if(finishedThreads.containsKey(N)){
-          return "result is " + finishedThreads.get(N);
-        }
-      }
+
+    else if(runningThreads.containsKey(N)){
+      return "calculating";
+    }
+
+    else if (finishedThreads.containsKey(N)){
+      return "result is " + finishedThreads.get(N);
     }
     return "No such thread found";
   }
@@ -294,7 +237,13 @@ public class Solution implements CommandRunner {
   public String after(Long N, Long M){
     //Check for circular dependency (Refer to Helper Methods)
     if(isCircularDependent(N, M)){
-      return createCircularMessage(N, M);
+      String circularMessage = "circular dependency ";
+      List<Long> circularPath = getCircularPath(N, M);
+
+      for(Long path : circularPath){
+        circularMessage += " " + path;
+      }
+      return circularMessage;
     }
     
     //Check if N is already completed or cancelled, immediately start M
@@ -315,83 +264,72 @@ public class Solution implements CommandRunner {
   }
 
   //COMMAND: FINISH
-  public String finish(){
-    System.out.println("finishing up all tasks...");
-    List<Thread> allActiveThreads = new ArrayList<>();
-
-    //Get all active threads
-    for(HashMap.Entry<Long, Thread> entry : runningThreads.entrySet()){
-      Thread thread = entry.getValue();
-      if(thread != null && thread.isAlive()){
-        allActiveThreads.add(thread);
-      }
-    }
-
-    //Wait for all threads to complete
-    for(Thread thread : allActiveThreads){
-      try{
-        thread.join();
-      }
-      catch(InterruptedException e){
+  public synchronized String finish(){
+    while(!runningThreads.isEmpty()){
+      try {
+        wait(1);
+      } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
     }
-
-    //Process any dependencies
-    List<Long> waitingThreads = new ArrayList<>(dependencies.keySet());
-    while(!dependencies.isEmpty()){
-      for(Long N : waitingThreads){
-        if(finishedThreads.contains(N) || cancelledThreads.contains(N)){
-          List<Long> dependents = dependencies.remove(N);
-          if(dependents != null){
-            for(Long dependent : dependents){
-              start(dependent);
-            }
-          }
-        }
-      }
-    }
-
     return "finished";
   }
 
   //COMMAND: ABORT
   public String abort(){
-    List<Thread> allThreads = new ArrayList<>();
+    synchronized (this) {
+      this.dependencies.clear();
+  }
 
-    for(HashMap.Entry<Long, Thread> entry : runningThreads.entrySet()){
-      Thread thread = entry.getValue();
-      if(thread != null && thread.isAlive()){
-        thread.interrupt();
-        allThreads.add(thread);
+  Set<Thread> currentRunningThreads2;
+  synchronized (this) {
+      Set<Thread> currentRunningThreads = new HashSet<Thread>(this.runningThreads.values());
+      currentRunningThreads2 = new HashSet<Thread>(this.runningThreads.values());
+      for (Thread thread : currentRunningThreads) {
+          if (thread.isAlive()) {
+              thread.interrupt();
+          }
       }
-    }
+  }
 
-    for(Thread thread : allThreads){
-      try{
-        thread.join();
+  for (Thread thread : currentRunningThreads2) {
+      try {
+          thread.join();
+      } catch (InterruptedException e) {
+          e.printStackTrace();
       }
-      catch(InterruptedException e){
-        Thread.currentThread().interrupt();
-      }
-    }
+  }
 
-    runningThreads.clear();
-    finishedThreads.clear();
-    cancelledThreads.clear();
-    dependencies.clear();
-    circularPath.clear();
+  synchronized (this) {
+      this.runningThreads.clear();
+      this.dependencies.clear();
+  }
 
-    return "aborted";
+  return "aborted";
   }
 
 
   /*
-   * HELPERS: FOR AFTER METHOD
-   * HELPERS: FOR AFTER METHOD
+   * HELPER METHODS
+   * 1. startDependentThreads
+   * 2. isCircularDependent
+   * 3. getCircularPath
+   * 4. findCircularPath
    */
+
+   //HELPER 1 (Start Command): Begins execution of dependent threads
+  private synchronized void startDependentThreads(Long N) {
+    if (dependencies.containsKey(N)) {
+        List<Long> nextThreads = dependencies.get(N);
+        dependencies.remove(N);
+        for (Long M : nextThreads) {
+            start(M);
+            waiting.remove(M);
+        }
+    }
+  }
   
-   //HELPER 1: Discern Circular Dependency
+  //HELPER 2 (After Command): Discern Circular Dependency
   private boolean isCircularDependent(Long N, Long M){
     //YES: Immediate Cycle is detected
     if(M.equals(N)){
@@ -420,54 +358,37 @@ public class Solution implements CommandRunner {
     return false;
   }
 
-  //HELPER 2: Create string for message, calling the findCircularPath() method 
-  private String createCircularMessage(Long N, Long M){
-    StringBuilder sb = new StringBuilder();
-
-    sb.append("circular dependency ");
-    sb.append(N);
-    List<Long> depList = circularPath(N, M);
-    sb.append(depList.size());
-    sb.append(" " + N);
-
-    return sb.toString();
+  //HELPER 3 (After Command): Build Path of Circular Dependencies
+  private List<Long> getCircularPath(Long N, Long M){
+    List<Long> path = new ArrayList<>();
+    path.add(N);
+    findCircularPathHelper(N, M, path);
+    return path;
   }
 
-  //HELPER 3: Build Chains of Circular Dependencies
-  private List<Long> circularPath(Long N, Long M){
-    //reset before every check
-    circularPath.clear();
-    //Keep track of checked elements
-    HashSet<Long> checked = new HashSet<>();
-    findCircularPath(N, M, checked);
-    return circularPath;
-  }
-
-
-  //HELPER 4: Create chain of circular dependencies in circularPath
-  private boolean findCircularPath(Long N, Long M, HashSet<Long> checked){
-    if(checked.contains(N)){
-      return false;
+  //HELPER 4 (After Command): Recursively search for circular dependencies, stop when value is found in key
+  private void findCircularPathHelper(Long N, Long M, List<Long> path) {
+    if (N == null){
+      return;
     }
-    circularPath.add(N);
-    checked.add(N);
 
-    if(N.equals(M) && circularPath.size() > 1) return true;
-
-    if(!dependencies.containsKey(N)){
-      circularPath.remove(N);
-      return false;
+    if (N.equals(M)) {
+        return;
     }
-    //Check all dependencies recursively, each call for a key in the dependencies map
-    List<Long> dependents = dependencies.get(N);
-    for(Long dependent : dependents){
-      if(!checked.contains(dependent)){
-        if(findCircularPath(dependent, M, checked)){
-          return true;
+    // find the key of the value N
+    Long key = null;
+    for (Long k : dependencies.keySet()) {
+        if (dependencies.get(k).contains(N)) {
+            key = k;
+            break;
         }
-      }
     }
-    circularPath.remove(N);
-    return false;
+    if (key != null){
+      if (path.contains(key)){
+        return;
+      }
+      path.add(key);
+    }
+    this.findCircularPathHelper(key, M, path);
   }
 }
