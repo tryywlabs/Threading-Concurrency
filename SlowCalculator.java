@@ -27,6 +27,7 @@ public class SlowCalculator implements Runnable {
       // You should NOT modify the calculation performed by this class, but you may want to add support for interruption
       int count = 0;
       for (long candidate = 2; candidate < Math.abs(N); ++candidate) {
+        //MODIFICATION: Condition to return integer flag -2 to indicate 
         if(Thread.currentThread().isInterrupted()){
             return -2;
         }

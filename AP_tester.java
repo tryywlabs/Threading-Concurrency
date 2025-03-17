@@ -1,7 +1,7 @@
 public class AP_tester {
 	public static void main(String[] args) {
 		Solution solution = new Solution();
-		instructionTester(solution); //NOT TERMINATING
+		//instructionTester(solution);
 		// System.out.println(abortSpeedTester(solution));
 		// successiveAfterTester(solution);
 		// AfterNoRunnableThread(solution);
@@ -15,7 +15,7 @@ public class AP_tester {
 		// multipleGetStatusTester(solution);
 		// finishCalculationTester(solution);
 		// nothingToFinishTester(solution);
-		// wrongCommandsTester(solution);
+		 wrongCommandsTester(solution);
 
 		//---------//
 		// testCancel(solution);
@@ -34,7 +34,7 @@ public class AP_tester {
 		System.out.println(solution.runCommand("running"));
 		System.out.println(solution.runCommand("cancel 72345680"));
 		System.out.println(solution.runCommand("running"));
-		// System.out.println(solution.runCommand("finish"));
+		System.out.println(solution.runCommand("finish"));
 	}
 	
 	public static void cancelNonExistant(Solution solution) {
