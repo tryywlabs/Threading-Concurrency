@@ -16,7 +16,7 @@ public class Solution implements CommandRunner {
   private ConcurrentHashMap<Long, Integer> finishedThreads; //Map of calculation finished threads, Long and Result
   private List<Long> cancelledThreads; //Map of cancelled threads
   private HashMap<Long, List<Long>> dependencies; //Map of a thread and its dependencies as a list
-  private ConcurrentLinkedQueue<Long> waiting;
+  private ConcurrentLinkedQueue<Long> waiting; //Queue of waiting commands, input via After
 
   public boolean getRunning(){
     return runningThreads.isEmpty();
