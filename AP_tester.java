@@ -15,12 +15,12 @@ public class AP_tester {
 		// multipleGetStatusTester(solution);
 		// finishCalculationTester(solution);
 		// nothingToFinishTester(solution);
-		// wrongCommandsTester(solution);
+		wrongCommandsTester(solution);
 
 		//---------//
 		// testCancel(solution);
 		// afterTesterRedo(solution);
-		finishTesterPlease(solution);
+		// finishTesterPlease(solution);
 	}
 	
 	public static void instructionTester(Solution solution) {
@@ -103,6 +103,8 @@ public class AP_tester {
 		System.out.println(solution.runCommand("running"));
 		System.out.println(solution.runCommand("abort"));
 		System.out.println(solution.runCommand("get 2"));
+		System.out.println(solution.runCommand("get 3"));
+		System.out.println(solution.runCommand("get 4"));
 	}
 	
 
@@ -191,6 +193,7 @@ public class AP_tester {
 		System.out.println(solution.runCommand("after 11111111 22222"));
 		System.out.println("takes about 15 seconds to finished");
 		System.out.println(solution.runCommand("finish"));
+		System.out.println(solution.runCommand("get 11111111"));
 		System.out.println(solution.runCommand("get 22222"));
 	}
 	
